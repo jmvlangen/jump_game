@@ -1,0 +1,25 @@
+Legend:
+>> : conveyer to the right
+<< : conveyer to the left
+<- : platform moving to the left
+-> : platform moving to the right
+xx : death
+$  : goal
+*  : character
+
+
+             $
+           >>>>>
+           
+
+
+>>>>>
+
+
+
+                                    <----
+
+
+   *
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                                   xxxxxx
