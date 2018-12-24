@@ -1,0 +1,21 @@
+* Begin
+- Simpel level ontwerp
+- Zorg dat het level werkt!!
+
+* Tekenen
+- simpele vormen tekenen
+- plaatjes op het scherm
+- (tijdelijke) plaatjes tekenen
+
+* Game mechanics
+- (1) Input lezen
+- beweging
+
+* Level editor
+- file format voor levels
+- level lader
+- level editor
+
+* Level design
+- maak levels!
+
