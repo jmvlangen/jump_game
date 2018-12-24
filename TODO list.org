@@ -1,5 +1,5 @@
 * Begin
-- Simpel level ontwerp
++ Simpel level ontwerp
 - Zorg dat het level werkt!!
 
 * Tekenen
