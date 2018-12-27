@@ -75,10 +75,14 @@ class Main {
   }
 
   void drawSquare() {
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
+    SDL_Rect rectangle{WIDTH/2,HEIGHT/2,16,16};
+    
+    SDL_SetRenderDrawColor(renderer,255,255,255,255);
     SDL_RenderClear(renderer);
     
-   // SDL_SetRenderDrawColor(renderer,255,255,255,255);
+    SDL_SetRenderDrawColor(renderer,0,0,0,255);
+    SDL_RenderFillRect(renderer,&rectangle);
+    
     SDL_RenderPresent(renderer);
   }
 
