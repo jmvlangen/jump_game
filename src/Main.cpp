@@ -16,18 +16,24 @@ class Main {
     
     initializeSdl();
 
-    createWindow();
-    createRenderer();
+    printRenderDrivers();
+
+    //createWindow();
+    //createRenderer();
     
-    drawSquare();
+    startUpdateAndRenderThread();
+    
+
     
     processEvents();
 
-    close();
+    checkThreadErrors();
 
+    close();
   }
 
   void close() {
+    stopThreads();
     if(sdlHasBeenInitialized) {
       SDL_Quit();
       sdlHasBeenInitialized = false;
@@ -37,10 +43,17 @@ class Main {
   private:
   static constexpr int WIDTH = 640, HEIGHT = 480;
 
+  double x{0.0}; //Boskabouter: remove this later.
+
   SDL_Window * window;
   SDL_Renderer * renderer;
-  std::atomic<bool> stopBoolean{false};
+  std::atomic<bool> 
+    stopBoolean{false}, //Used to stop the program and all non-main threads.
+    threadError{false}; //If this becomes true, it means at least one of the
+      //non-main threads has encountered an error.
   bool sdlHasBeenInitialized{false};
+
+  std::thread updateAndRenderThread;
 
   void initializeSdl() {
     int status = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK);
@@ -52,11 +65,50 @@ class Main {
     sdlHasBeenInitialized = true;
     std::printf("SDL has been initialized\n");
   }
+
+  void printRenderDrivers() {
+    SDL_RendererInfo info;
+
+    std::printf("Available render drivers:\n");
+
+    for( int i = 0;  i < SDL_GetNumRenderDrivers(); ++i ) {
+      std::printf("  %2d: ",i);
+      SDL_GetRenderDriverInfo(i,&info);
+      printRenderDriver(info);
+    }
+  }
+
+  void printRenderDriver(const SDL_RendererInfo& info) {
+    std::printf("%s\n",info.name);
+  }
+
+  void startUpdateAndRenderThread() {
+    updateAndRenderThread = std::thread( [this]() { updateAndRender(); } );
+  }
+
+  void updateAndRender() {
+    try {
+      createWindow();
+      createRenderer();
+    
+      while(!stopBoolean) {
+        update();
+        render();
+      }
+    }
+    catch(std::exception& e) {
+      std::printf("Exception in updateRender thread: %s\n", e.what() );
+      stopBoolean = true;
+      
+    }
+  }
+  
   void createWindow() {
     window = SDL_CreateWindow("Window title"
       ,SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,
       WIDTH,HEIGHT,
-      0);
+      SDL_WINDOW_FULLSCREEN_DESKTOP|
+      SDL_WINDOW_BORDERLESS);
     
     if(window == NULL) {
       std::printf("Could not create a window: %s",SDL_GetError());
@@ -74,16 +126,33 @@ class Main {
     }
   }
 
-  void drawSquare() {
-    SDL_Rect rectangle{WIDTH/2,HEIGHT/2,16,16};
-    
+  
+  void update() {
+    x += 0.6666;
+    if(x > 40) {
+      x = 0;
+    }
+  }
+
+  void render() {
+    clearScreen();
+    drawSquare();
+    SDL_RenderPresent(renderer);
+  }
+
+  void clearScreen() {
     SDL_SetRenderDrawColor(renderer,255,255,255,255);
     SDL_RenderClear(renderer);
+  }
+
+  void drawSquare() {
+    int xRender = (int) (x*16);
+    
+    //SDL_Rect rectangle{WIDTH/2,HEIGHT/2,16,16};
+    SDL_Rect rectangle{xRender,HEIGHT/2,16,16};
     
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
     SDL_RenderFillRect(renderer,&rectangle);
-    
-    SDL_RenderPresent(renderer);
   }
 
   void processEvents() {
@@ -97,9 +166,32 @@ class Main {
     }
   }
 
+  void checkThreadErrors() {
+    if(threadError) {
+      std::printf("One of the non-main threads has encountered an error!\n");
+      throw std::runtime_error("Error in at least one non-main thread.");
+    }
+  }
+
   void processEvent(const SDL_Event& event) {
     switch(event.type) {
-      case SDL_QUIT: stopBoolean = true; break;
+      case SDL_QUIT: handleQuitEvent(); break;
+    }
+  }
+
+  void handleQuitEvent() {
+    std::printf("Received the quit signal\n");
+    stopBoolean = true;
+  }
+
+  void stopThreads() {
+    stopBoolean = true;
+    waitForThread(updateAndRenderThread);
+  }
+
+  void waitForThread(std::thread& t) {
+    if( t.joinable() ) {
+      t.join();
     }
   }
 
