@@ -11,16 +11,15 @@ namespace JumpGame {
 
 class Main {
   public:
-  void run() {
+  void run(int numberOfArguments, char ** arguments) {
+
     std::printf("Hello, World!\n");
+    readCommandLineArguments(numberOfArguments, arguments);
     
     initializeSdl();
 
     printRenderDrivers();
 
-    //createWindow();
-    //createRenderer();
-    
     startUpdateAndRenderThread();
     
 
@@ -41,9 +40,18 @@ class Main {
   }
   
   private:
-  static constexpr int WIDTH = 640, HEIGHT = 480;
+  static constexpr int N_BLOCKS = 40; 
+  /*
+  Number of blocks that fit in the width of one screen. I have set it to
+  40 as you initially wanted blocks of 16x16 pixels in a screen of width
+  640.
+  */
 
   double x{0.0}; //Boskabouter: remove this later.
+
+  int displayNumber{0}; //Indicates the monitor you want to use.
+
+  int blockSize, renderWidth,renderHeight;
 
   SDL_Window * window;
   SDL_Renderer * renderer;
@@ -55,6 +63,36 @@ class Main {
 
   std::thread updateAndRenderThread;
 
+  void readCommandLineArguments(int numberOfArguments, char** arguments) {
+    if(numberOfArguments > 1) {
+      readDisplayNumber(arguments[1]);
+    }
+    else {
+      std::printf(
+        "Display number is 0 (primary display) by default, but it can be "
+        "changed by providing a command line argument.\n");
+    }
+  }
+
+  void readDisplayNumber(std::string text) {
+    try {
+      displayNumber = std::stoi(text);
+    }
+    catch(std::exception& e) {
+      std::printf(
+        "Could not read the display number from the text \"%s\".\n" 
+        "Error message: %s\n."
+        "The display number will be set to 0.\n"
+        ,text.c_str(), e.what() );
+
+      displayNumber = 0;
+    }
+
+    if(displayNumber < 0) {
+      throw std::runtime_error("The display number cannot be negative");
+    }
+  }
+  
   void initializeSdl() {
     int status = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK);
 
@@ -90,6 +128,8 @@ class Main {
     try {
       createWindow();
       createRenderer();
+
+      blockSize = renderWidth/N_BLOCKS;
     
       while(!stopBoolean) {
         update();
@@ -98,22 +138,34 @@ class Main {
     }
     catch(std::exception& e) {
       std::printf("Exception in updateRender thread: %s\n", e.what() );
+      threadError = true;
       stopBoolean = true;
-      
     }
   }
   
   void createWindow() {
-    window = SDL_CreateWindow("Window title"
-      ,SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,
-      WIDTH,HEIGHT,
+    if(displayNumber >= SDL_GetNumVideoDisplays() ) {
+      std::printf(
+        "The display number %d is larger than the number of monitors - 1\n",
+        displayNumber);
+      throw std::runtime_error("Display number is too large.");
+    }
+
+    SDL_Rect rectangle{0,0,0,0};
+    SDL_GetDisplayBounds(displayNumber,&rectangle);
+    
+    window = SDL_CreateWindow("Window title",
+      rectangle.x,rectangle.y,
+      0,0,
       SDL_WINDOW_FULLSCREEN_DESKTOP|
+      SDL_WINDOW_ALLOW_HIGHDPI|
       SDL_WINDOW_BORDERLESS);
     
     if(window == NULL) {
       std::printf("Could not create a window: %s",SDL_GetError());
       throw std::runtime_error("Window creation error");
     }
+
   }
 
   void createRenderer() {
@@ -124,12 +176,15 @@ class Main {
       std::printf("Could not create a renderer: %s",SDL_GetError());
       throw std::runtime_error("Renderer creation error");
     }
+    
+    SDL_GetRendererOutputSize(renderer,&renderWidth,&renderHeight);
+    std::printf("Window size in pixels: (%d,%d)\n",renderWidth,renderHeight);
   }
 
   
   void update() {
     x += 0.6666;
-    if(x > 40) {
+    if(x > N_BLOCKS) {
       x = 0;
     }
   }
@@ -146,10 +201,9 @@ class Main {
   }
 
   void drawSquare() {
-    int xRender = (int) (x*16);
+    int xRender = (int) (x*blockSize);
     
-    //SDL_Rect rectangle{WIDTH/2,HEIGHT/2,16,16};
-    SDL_Rect rectangle{xRender,HEIGHT/2,16,16};
+    SDL_Rect rectangle{xRender,renderHeight/4,blockSize,blockSize};
     
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
     SDL_RenderFillRect(renderer,&rectangle);
@@ -203,10 +257,10 @@ class Main {
 int main(int numberOfArguments, char** arguments) {
   JumpGame::Main main;
   try {
-    main.run();
+    main.run(numberOfArguments,arguments);
   }
   catch(std::exception& e) {
-    std::printf( "Uncaught Exception in main thread: %s\n",e.what() );
+    std::printf( "Error: %s\n",e.what() );
     main.close();
     return 1;
   }
