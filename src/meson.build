@@ -3,7 +3,8 @@ project('JumpGame','cpp',
 )
 
 src=[
-  'Main.cpp'
+  'Main.cpp',
+  'CollisionTable.cpp'
 ]
 
 SDL = dependency('sdl2' ,version : '>=2.0.7')

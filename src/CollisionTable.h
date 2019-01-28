@@ -1,7 +1,8 @@
-#pragma once // Compile only once
+#pragma once // Parse only once
 
 #include <set>
-#include Object.h
+#include <vector>
+#include "Object.h"
 
 namespace JumpGame {
 
@@ -41,7 +42,11 @@ namespace JumpGame {
       at the given position after this object was
       added.
      */
-    int register(Object* object, int x, int y);
+
+    //This method could not be named register, because that is a C++ keyword.
+    int registerObject(Object * object, int x, int y);
+
+    int deregisterObject(Object * object, int x, int y);
 
     /*
       Looks up all objects at a given position.
@@ -56,7 +61,11 @@ namespace JumpGame {
       The set of objects registered at the given
       position.
      */
-    std::set<Object> lookup(int x, int y);
+    std::set<Object *>& lookup(int x, int y);
+
+  private:
+    std::vector< std::set<Object*> > objectSets;
+    std::vector< std::set<Object*>* > columnPointers;
   };
 
 }
